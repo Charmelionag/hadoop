@@ -1,0 +1,29 @@
+version: '3'
+services:
+  namenode:
+    container_name: namenode
+    image: hadoop:0.0.20
+    networks:
+      net:
+        ipv4_address: 172.18.0.10
+        
+  datanode01:
+    image: hadoop:0.0.20
+    container_name: datanode01
+    networks:
+      net:
+        ipv4_address: 172.18.0.11
+        
+  datanode03:
+    image: hadoop:0.0.20
+    container_name: datanode02
+    networks:
+      net:
+        ipv4_address: 172.18.0.12
+
+networks:
+  net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.0.0/24
