@@ -1,0 +1,16 @@
+#!/bin/bash
+service ssh start
+eval $(ssh-agent -s)
+ssh-add /root/.ssh/id_rsa
+echo -e "127.0.0.1     localhost
+172.18.0.10    namenode
+172.18.0.11    datanode01
+172.18.0.12    datanode02" | tee /etc/hosts
+sleep 1
+ssh-keyscan -H localhost >> ~/.ssh/known_hosts
+ssh-keyscan -H namenode >> ~/.ssh/known_hosts
+ssh-keyscan -H datanode01 >> ~/.ssh/known_hosts
+ssh-keyscan -H datanode02 >> ~/.ssh/known_hosts
+hdfs namenode -format
+start-dfs.sh
+ping 0.0.0.0 > /dev/null

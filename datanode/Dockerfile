@@ -42,18 +42,20 @@ export HADOOP_HDFS_HOME=\$HADOOP_HOME\n\
 export YARN_HOME=\$HADOOP_HOME\n\
 export HADOOP_COMMON_LIB_NATIVE_DIR=\$HADOOP_HOME/lib/native\n\
 export HADOOP_OPTS=\"-Djava.library.path=\$HADOOP_HOME/lib/native\"\n\
-export PATH=\$PATH:\$HADOOP_HOME/sbin:\$HADOOP_HOME/bin" | tee -a .bashrc
+export PATH=\$PATH:\$HADOOP_HOME/sbin:\$HADOOP_HOME/bin" | tee -a /root/.bashrc
 ENV PATH="${PATH}:/root/hadoop/sbin:/root/hadoop/bin"
 RUN cat /root/.ssh/id_rsa.pub > /root/.ssh/authorized_keys
 
 # Configurations
-# Hadoop
+# Java 
 RUN sed -i "s|export HADOOP_CONF_DIR=.*|export HADOOP_CONF_DIR=\${HADOOP_CONF_DIR:-\"/root/hadoop/etc/hadoop\"}|" /root/hadoop/etc/hadoop/hadoop-env.sh
 RUN sed -i "s/^export JAVA_HOME.*/export JAVA_HOME=\/usr\/lib\/jvm\/java-8-openjdk-amd64/" /root/hadoop/etc/hadoop/hadoop-env.sh
+
+# core-site.xml
 RUN echo "<configuration>\n\
 \t<property>\n\
 \t\t<name>fs.defaultFS</name>\n\
-\t\t<value>hdfs://localhost:9000</value>\n\
+\t\t<value>hdfs://namenode:9000</value>\n\
 \t</property>\n\
 \t<property>\n\
 \t\t<name>hadoop.tmp.dir</name>\n\
@@ -61,52 +63,64 @@ RUN echo "<configuration>\n\
 \t</property>\n\
 </configuration>" | tee /root/hadoop/etc/hadoop/core-site.xml
 RUN mkdir -p /root/hadooptmpdata
+
+# hdfs-site.xml
 RUN echo "<configuration>\n\
 \t<property>\n\
 \t\t<name>dfs.replication</name>\n\
 \t\t<value>1</value>\n\
 \t</property>\n\
 \t<property>\n\
-\t\t<name>dfs.name.dir</name>\n\
+\t\t<name>dfs.namenode.dir</name>\n\
 \t\t<value>file:///root/hdfs/namenode</value>\n\
 \t</property>\n\
 \t<property>\n\
-\t\t<name>dfs.data.dir</name>\n\
+\t\t<name>dfs.datanode.dir</name>\n\
 \t\t<value>file:///root/hdfs/datanode</value>\n\
 \t</property>\n\
 </configuration>" | tee /root/hadoop/etc/hadoop/hdfs-site.xml
 RUN mkdir -p /root/hadoop/hdfs/namenode && mkdir /root/hadoop/hdfs/datanode
+
+# mapred-site.xml
 RUN cp /root/hadoop/etc/hadoop/mapred-site.xml.template /root/hadoop/etc/hadoop/mapred-site.xml
 RUN echo "<configuration>\n\
 \t<property>\n\
 \t\t<name>mapreduce.framework.name</name>\n\
 \t\t<value>yarn</value>\n\
 \t</property>\n\
+\t<property>\n\
+\t\t<name>yarn.app.mapreduce.am.env</name>\n\
+\t\t<value>HADOOP_MAPRED_HOME=\$HADOOP_HOME</value>\n\
+\t</property>\n\
+\t<property>\n\
+\t\t<name>mapreduce.map.env</name>\n\
+\t\t<value>HADOOP_MAPRED_HOME=\$HADOOP_HOME</value>\n\
+\t</property>\n\
+\t<property>\n\
+\t\t<name>mapreduce.reduce.env</name>\n\
+\t\t<value>HADOOP_MAPRED_HOME=\$HADOOP_HOME</value>\n\
+\t</property>\n\
 </configuration>" | tee /root/hadoop/etc/hadoop/mapred-site.xml
+
+# yarn-site.xml
 RUN echo "<configuration>\n\
 \t<property>\n\
 \t\t<name>mapreduceyarn.nodemanager.aux-services</name>\n\
 \t\t<value>mapreduce_shuffle</value>\n\
 \t</property>\n\
+\t<property>\n\
+\t\t<name>yarn.resourcemanager.hostname</name>\n\
+\t\t<value>172.18.0.11</value>\n\
+\t</property>\n\
 </configuration>" | tee /root/hadoop/etc/hadoop/yarn-site.xml
+RUN touch /root/hadoop/etc/hadoop/workers && echo "datanode01\ndatanode02" | tee /root/hadoop/etc/hadoop/workers
 
-# Deployment file
-RUN echo '#!/bin/bash' > /root/deploy.sh
-RUN echo 'service ssh start' >> /root/deploy.sh
-RUN echo 'eval $(ssh-agent -s)' >> /root/deploy.sh
-RUN echo 'ssh-add /root/.ssh/id_rsa' >> /root/deploy.sh
-RUN echo 'echo -e "127.0.0.1\tlocalhost\n172.18.0.10\tnamenode\n172.18.0.11\tdatanode01\n172.18.0.12\tdatanode02" | tee /etc/hosts' >> /root/deploy.sh
-RUN echo "sleep 3\n\
-ssh-keyscan -H localhost >> ~/.ssh/known_hosts\n\
-ssh-keyscan -H namenode >> ~/.ssh/known_hosts\n\
-ssh-keyscan -H datanode01 >> ~/.ssh/known_hosts\n\
-ssh-keyscan -H datanode02 >> ~/.ssh/known_hosts\n\
-hdfs namenode -format\n\
-start-dfs.sh\n\
-start-yarn.sh\n\
-ping 0.0.0.0 > /dev/null" >> /root/deploy.sh && chmod +x /root/deploy.sh
+# slaves
+RUN echo "namenode\ndatanode01\ndatanode02" > /root/hadoop/etc/hadoop/slaves
+
+COPY deploy.slave /root/deploy.sh
 
 # Ports
-EXPOSE 50070 8088
+EXPOSE 50070 8088 8031 
 
 CMD /root/deploy.sh
