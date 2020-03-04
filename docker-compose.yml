@@ -2,7 +2,7 @@ version: '3'
 services:
   namenode:
     container_name: namenode
-    image: hadoop-namenode:0.0.3
+    image: hadoop-namenode:0.0.2
     networks:
       net:
         ipv4_address: 172.18.0.10
@@ -19,7 +19,7 @@ services:
             - "8088:8088"
         
   datanode03:
-    image: hadoop-datanode:0.0.3
+    image: hadoop-datanode:0.0.2
     container_name: datanode02
     networks:
       net:

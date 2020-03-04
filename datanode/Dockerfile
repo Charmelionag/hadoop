@@ -43,7 +43,7 @@ export YARN_HOME=\$HADOOP_HOME\n\
 export HADOOP_COMMON_LIB_NATIVE_DIR=\$HADOOP_HOME/lib/native\n\
 export HADOOP_OPTS=\"-Djava.library.path=\$HADOOP_HOME/lib/native\"\n\
 export PATH=\$PATH:\$HADOOP_HOME/sbin:\$HADOOP_HOME/bin" | tee -a /root/.bashrc
-ENV PATH="${PATH}:/root/hadoop/sbin:/root/hadoop/bin"
+RUN /bin/bash -c "source /root/.bashrc"
 RUN cat /root/.ssh/id_rsa.pub > /root/.ssh/authorized_keys
 
 # Configurations

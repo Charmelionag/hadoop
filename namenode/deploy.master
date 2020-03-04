@@ -11,6 +11,6 @@ ssh-keyscan -H localhost >> ~/.ssh/known_hosts
 ssh-keyscan -H namenode >> ~/.ssh/known_hosts
 ssh-keyscan -H datanode01 >> ~/.ssh/known_hosts
 ssh-keyscan -H datanode02 >> ~/.ssh/known_hosts
-hdfs namenode -format
-start-dfs.sh
+/root/hadoop/bin/hdfs namenode -format
+/root/hadoop/sbin/start-dfs.sh
 ping 0.0.0.0 > /dev/null
